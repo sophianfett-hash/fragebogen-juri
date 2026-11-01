@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Fragebogen: Telefonagent & Assistenz für die Kfz-Werkstatt</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --ink:#16202a; --muted:#5b6b7a;
+    --line:#dde4ea; --accent:#1f4e79; --accent-soft:#e8f0f7;
+    --ok:#0f7a4d; --warn:#a35b00; --err:#b3261e; --radius:14px; --tap:48px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#141a20; --card:#1d252d; --ink:#e8edf2; --muted:#9fb0bf;
+      --line:#2d3945; --accent:#7fb3dd; --accent-soft:#223140;
+      --ok:#5fd39b; --warn:#e0a458; --err:#ef8079;
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px; line-height:1.5; padding-bottom:calc(env(safe-area-inset-bottom) + 12px);
+    -webkit-text-size-adjust:100%; overscroll-behavior-y:none;
+  }
+  .wrap{max-width:780px; margin:0 auto; padding:0 14px}
+
+  header.hero{background:var(--accent); color:#fff; padding:22px 0 20px}
+  header.hero h1{font-size:1.26rem; line-height:1.25; margin:0 0 10px}
+  header.hero p{margin:0 0 9px; font-size:.94rem; opacity:.96}
+  header.hero p:last-child{margin-bottom:0}
+
+  /* iOS-Hinweisbanner, wenn die Seite offline geoeffnet wurde */
+  #ioswarn{display:none; background:#fff4e0; color:#7a4600; border-bottom:1px solid #e8c98a;
+           padding:11px 0; font-size:.88rem}
+  #ioswarn .wrap strong{display:block; margin-bottom:3px}
+  @media (prefers-color-scheme: dark){
+    #ioswarn{background:#3a2c12; color:#f0c68a; border-bottom-color:#6b5220}
+  }
+
+  .sticky{position:sticky; top:0; z-index:20; background:var(--card);
+          border-bottom:1px solid var(--line); box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .bar{height:5px; background:var(--line)}
+  .bar > i{display:block; height:100%; width:0%; background:var(--accent); transition:width .25s}
+  .pinfo{display:flex; justify-content:space-between; gap:10px; align-items:center;
+         padding:7px 0; font-size:.82rem; color:var(--muted); flex-wrap:wrap}
+  .pinfo b{color:var(--ink)}
+  .savestate{font-size:.78rem}
+  .savestate.ok{color:var(--ok)} .savestate.err{color:var(--warn)}
+
+  nav.jump{background:var(--card); border-bottom:1px solid var(--line); padding:9px 0}
+  nav.jump .wrap{display:flex; gap:7px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch}
+  nav.jump .wrap::-webkit-scrollbar{display:none}
+  nav.jump a{flex:0 0 auto; font-size:.8rem; text-decoration:none; color:var(--accent);
+             border:1px solid var(--line); border-radius:999px; padding:6px 12px; white-space:nowrap}
+  nav.jump a.done::after{content:" \2713"; color:var(--ok)}
+
+  main{padding:16px 0 30px}
+  section.part{margin:0 0 26px; scroll-margin-top:96px}
+  h2.parttitle{font-size:1.05rem; margin:22px 0 4px; padding-bottom:7px;
+               border-bottom:2px solid var(--accent); display:flex;
+               justify-content:space-between; align-items:baseline; gap:10px}
+  h2.parttitle span.ps{font-size:.78rem; font-weight:400; color:var(--muted)}
+  h3.sub{font-size:.94rem; color:var(--muted); margin:16px 0 8px; font-weight:600}
+
+  .q{background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+     padding:14px 14px 13px; margin:0 0 11px}
+  .q .qhead{display:flex; gap:9px; align-items:baseline; margin-bottom:5px; flex-wrap:wrap}
+  .qid{font-size:.74rem; font-weight:700; letter-spacing:.04em; color:var(--accent);
+       background:var(--accent-soft); border-radius:6px; padding:2px 7px; white-space:nowrap}
+  .qtitle{font-weight:650; font-size:.99rem}
+  .qtext{color:var(--ink); margin:2px 0 9px; font-size:.94rem}
+  .qhint{color:var(--muted); font-size:.83rem; margin:-4px 0 9px; font-style:italic}
+  .req{color:var(--err); font-weight:700}
+  .opt-note{font-size:.8rem; color:var(--muted); margin:8px 0 0}
+
+  .choices{display:flex; flex-direction:column; gap:8px}
+  .choice{display:flex; align-items:flex-start; gap:11px; min-height:var(--tap);
+          border:1px solid var(--line); border-radius:11px; padding:11px 12px;
+          cursor:pointer; background:var(--card); -webkit-tap-highlight-color:transparent}
+  .choice:active{background:var(--accent-soft)}
+  .choice input{margin:2px 0 0; width:20px; height:20px; accent-color:var(--accent); flex:0 0 auto}
+  .choice span.lbl{flex:1 1 auto; font-size:.94rem; line-height:1.35}
+  .choice.on{border-color:var(--accent); background:var(--accent-soft)}
+  .choice .open-in{margin-top:8px; width:100%}
+
+  input[type=text], textarea, select{
+    font:inherit; font-size:16px; color:var(--ink); background:var(--bg);
+    border:1px solid var(--line); border-radius:10px; padding:12px; width:100%;
+    min-height:var(--tap); -webkit-appearance:none; appearance:none}
+  input[type=text]:focus, textarea:focus, select:focus{outline:2px solid var(--accent); outline-offset:1px}
+  textarea{resize:vertical; min-height:92px; line-height:1.45}
+  .counter{font-size:.76rem; color:var(--muted); text-align:right; margin-top:4px}
+
+  table.mx{width:100%; border-collapse:collapse; font-size:.9rem}
+  table.mx th{text-align:left; font-size:.79rem; color:var(--muted); font-weight:600;
+              padding:5px 8px 5px 0; border-bottom:1px solid var(--line)}
+  table.mx td{padding:5px 8px 5px 0; border-bottom:1px solid var(--line)}
+  table.mx td:last-child{width:104px}
+  table.mx input{text-align:right}
+  .mxsum{font-size:.82rem; color:var(--muted); margin-top:7px}
+  .mxsum.warn{color:var(--warn)}
+
+  .done{background:var(--card); border:2px solid var(--accent); border-radius:var(--radius);
+        padding:18px; margin:8px 0 24px}
+  .done h3{margin:0 0 8px; font-size:1.05rem}
+  .done p{margin:0 0 12px; font-size:.92rem; color:var(--muted)}
+  .warnbox{border:1px solid var(--warn); background:color-mix(in srgb, var(--warn) 8%, transparent);
+           border-radius:11px; padding:11px 13px; margin:0 0 13px; font-size:.9rem}
+  .warnbox b{color:var(--warn)}
+  .warnbox ul{margin:7px 0 0; padding-left:20px}
+  .warnbox a{color:var(--accent)}
+  .btn{display:block; width:100%; font:inherit; font-size:1rem; font-weight:600;
+       border-radius:12px; padding:14px; min-height:54px; cursor:pointer;
+       border:1px solid var(--accent); background:var(--accent); color:#fff; margin:0 0 10px;
+       -webkit-tap-highlight-color:transparent; touch-action:manipulation}
+  @media (prefers-color-scheme: dark){ .btn{color:#0e151b} }
+  .btn:active{filter:brightness(.92)}
+  .btn.sec{background:var(--card); color:var(--accent)}
+  .btn.ghost{background:transparent; color:var(--muted); border-color:var(--line); font-weight:500}
+  .out{margin-top:8px}
+  .out textarea{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+                font-size:.8rem; min-height:160px}
+  .hintline{font-size:.83rem; color:var(--muted); margin:8px 0 0}
+  .okmsg{display:none; background:color-mix(in srgb, var(--ok) 12%, transparent);
+         border:1px solid var(--ok); color:var(--ok); border-radius:11px;
+         padding:12px 13px; font-size:.9rem; margin:0 0 12px}
+  .okmsg.show{display:block}
+  .steps{counter-reset:s; list-style:none; padding:0; margin:0 0 14px}
+  .steps li{counter-increment:s; position:relative; padding:0 0 9px 30px; font-size:.9rem; color:var(--muted)}
+  .steps li::before{content:counter(s); position:absolute; left:0; top:0;
+                     width:21px; height:21px; border-radius:50%; background:var(--accent-soft);
+                     color:var(--accent); font-size:.76rem; font-weight:700;
+                     display:flex; align-items:center; justify-content:center}
+  .steps li b{color:var(--ink)}
+  footer{color:var(--muted); font-size:.78rem; text-align:center; padding:18px 0 26px}
+</style>
+</head>
+<body>
+
+<div id="ioswarn"><div class="wrap">
+  <strong>Hinweis für das iPhone</strong>
+  Diese Seite läuft am besten, wenn du sie in <b>Safari</b> öffnest (nicht in der WhatsApp-Vorschau).
+  In der WhatsApp-Vorschau funktioniert das Formular nicht vollständig.
+  <span id="ioswarn-why"></span>
+</div></div>
+
+<header class="hero">
+  <div class="wrap">
+    <h1 id="h-title">Fragebogen: Telefonagent & Assistenz für die Kfz-Werkstatt</h1>
+    <p id="p-intro"></p>
+    <p id="p-howto"></p>
+    <p id="p-note"></p>
+  </div>
+</header>
+
+<div class="sticky">
+  <div class="bar"><i id="pbar"></i></div>
+  <div class="wrap pinfo">
+    <span><b id="pdone">0</b> von <b id="ptot">0</b> beantwortet</span>
+    <span id="preq"></span>
+    <span class="savestate" id="savestate"></span>
+  </div>
+</div>
+
+<nav class="jump"><div class="wrap" id="jump"></div></nav>
+
+<main class="wrap" id="main"></main>
+
+<div class="wrap" id="finish"></div>
+
+<footer id="foot"></footer>
+
+<script>
+"use strict";
+const DATA = {"title":"Fragebogen: Telefonagent & Assistenz für die Kfz-Werkstatt","intro":"Bitte vollständig und ehrlich ausfüllen. Es geht nicht darum, zu zeigen, was schon gut funktioniert, sondern darum, wo es am meisten nervt und wo du am meisten Zeit verlierst.","howto":"Teil 1 dauert etwa 10 Minuten und ist das Wichtigste. Teil 2 ist optional, wenn du Zeit hast. Tippen oder anklicken genügt überall; nur bei den offenen Zeilen bitte etwas eintragen. Deine Eingaben werden automatisch auf diesem Gerät gespeichert – du kannst also pausieren und später weitermachen. Am Ende lädst du deine Antworten als Datei herunter und schickst sie mir einfach per WhatsApp.","customer":"Juri","customer_note":"Deine Antworten sind Arbeitsgrundlage für den Bau, keine Bewertung von dir. Was hier als „nervig“ steht, ist genau das, was wir zuerst wegbekommen wollen.","return_hint":"Fertig? Unten kannst du deine Antworten als Datei herunterladen und per WhatsApp zurückschicken.","sections":[{"heading":"Teil 1 – Sofort-Check (10 Minuten)","blocks":[{"id":"F-01","type":"radio","title":"Fahrzeuge pro Tag","text":"Wie viele Fahrzeuge kommen durchschnittlich pro Tag in deine Werkstatt?","hint":"","required":true,"max_select":null,"maxlength":null,"options":[{"label":"bis 3","open":false},{"label":"4–8","open":false},{"label":"9–15","open":false},{"label":"16–30","open":false},{"label":"mehr als 30","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-02","type":"radio","title":"Personen im Betrieb","text":"Wie viele Leute arbeiten im Betrieb (inkl. Azubi, Familienangehörige, Teilzeit)?","hint":"","required":true,"max_select":null,"maxlength":null,"options":[{"label":"nur ich","open":false},{"label":"1–2","open":false},{"label":"3–5","open":false},{"label":"6–10","open":false},{"label":"mehr als 10","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-03","type":"text","title":"Arbeitszeit","text":"Wann fängst du normalerweise an, wann hörst du auf, und wie viele Stunden sind das?","hint":"Eine kurze Notiz reicht.","required":true,"max_select":null,"maxlength":300,"options":[],"columns":[],"rows":[]},{"id":"F-04","type":"radio","title":"Anrufe pro Tag","text":"Wie viele eingehende Anrufe kommen ungefähr pro Tag?","hint":"","required":true,"max_select":null,"maxlength":null,"options":[{"label":"0–5","open":false},{"label":"6–15","open":false},{"label":"16–30","open":false},{"label":"31–60","open":false},{"label":"mehr als 60","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-05","type":"radio","title":"Anrufspitzen","text":"Wann kommen die meisten Anrufe?","hint":"","required":true,"max_select":null,"maxlength":null,"options":[{"label":"8–10 Uhr","open":false},{"label":"10–12","open":false},{"label":"12–14","open":false},{"label":"14–16","open":false},{"label":"16–18","open":false},{"label":"abends","open":false},{"label":"gleichmäßig über den Tag","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-06","type":"radio","title":"Verlorene Anrufe","text":"Wie viele Anrufe gehen verloren, weil niemand rangeht? (Schätzung pro Tag)","hint":"","required":true,"max_select":null,"maxlength":null,"options":[{"label":"fast nie","open":false},{"label":"1–3","open":false},{"label":"4–10","open":false},{"label":"11–20","open":false},{"label":"mehr als 20","open":false},{"label":"keine Ahnung","open":false}],"columns":[],"rows":[]},{"id":"F-07","type":"radio","title":"Anruf während der Arbeit am Auto","text":"Was passiert heute, wenn ein Kunde anruft, während du am Fahrzeug arbeitest?","hint":"","required":true,"max_select":null,"maxlength":null,"options":[{"label":"Handy klingelt weiter, ich rufe später zurück","open":false},{"label":"ich nehme kurz ab und unterbreche die Arbeit","open":false},{"label":"ein Mitarbeiter nimmt ab","open":false},{"label":"es gibt niemanden, der abnimmt – ich rufe selbst zurück","open":false},{"label":"anderes","open":true},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-08","type":"radio","title":"Telefonzeit pro Tag","text":"Wie viel Zeit verbringst du selbst am Telefon?","hint":"","required":true,"max_select":null,"maxlength":null,"options":[{"label":"unter 30 Min","open":false},{"label":"30–60 Min","open":false},{"label":"1–2 Std","open":false},{"label":"2–4 Std","open":false},{"label":"mehr als 4 Std","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-09","type":"check","title":"Zeitfresser","text":"Welche Aufgaben kosten dich am meisten Zeit? (max. 3 Kreuze)","hint":"","required":true,"max_select":3,"maxlength":null,"options":[{"label":"Angebote schreiben","open":false},{"label":"Terminbestätigungen","open":false},{"label":"Rechnungen schreiben","open":false},{"label":"offene Post / Mahnungen","open":false},{"label":"Terminplanung","open":false},{"label":"Teile bestellen / Preise suchen","open":false},{"label":"Kundeninfos suchen (Historie, VIN, TÜV)","open":false},{"label":"Fahrzeugübergabe / Protokoll","open":false},{"label":"Buchhaltung / Steuern","open":false},{"label":"Kundenkommunikation (Mail/WhatsApp)","open":false},{"label":"Lager / Aufräumen","open":false},{"label":"Papierkram","open":false},{"label":"fehlende Teile oder Infos","open":false},{"label":"Sonstiges","open":true},{"label":"nichts davon trifft zu / weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-10","type":"check","title":"Nervigste Punkte","text":"Was nervt dich am meisten? (max. 3 Kreuze)","hint":"","required":true,"max_select":3,"maxlength":null,"options":[{"label":"Anrufe, die unterbrechen","open":false},{"label":"Angebote tippen","open":false},{"label":"Terminwünsche","open":false},{"label":"Rechnungsrückfragen","open":false},{"label":"fehlende Teile oder Infos","open":false},{"label":"Papierkram","open":false},{"label":"Kunden, die nicht zurückrufen","open":false},{"label":"Computer-Programme","open":false},{"label":"Unordnung im Lager","open":false},{"label":"falsche Erinnerungen / vergessene Rückrufe","open":false},{"label":"Sonstiges","open":true},{"label":"nichts davon trifft zu / weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-11","type":"radio","title":"Erreichbarkeit","text":"Wie willst du heute informiert werden, wenn etwas dringend ist?","hint":"","required":true,"max_select":null,"maxlength":null,"options":[{"label":"Telefon","open":false},{"label":"SMS","open":false},{"label":"WhatsApp-Sprachnachricht","open":false},{"label":"WhatsApp-Text","open":false},{"label":"E-Mail","open":false},{"label":"gar nicht","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-12","type":"check","title":"Freigabegrenze","text":"Was soll ein Assistent niemals ohne deine Freigabe tun?","hint":"Alles ankreuzen, was gelten soll.","required":true,"max_select":null,"maxlength":null,"options":[{"label":"Preise nennen","open":false},{"label":"Termine zusagen","open":false},{"label":"Aufträge annehmen","open":false},{"label":"Mails an Kunden senden","open":false},{"label":"Mahnungen schreiben","open":false},{"label":"Teile bestellen","open":false},{"label":"nichts davon – nur alles vorbereiten","open":false},{"label":"Sonstiges","open":true},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-13","type":"text","title":"Top-3-Szenen","text":"Welche 2–3 Szenen würden dir den größten Arbeitstag sparen?","hint":"","required":true,"max_select":null,"maxlength":600,"options":[],"columns":[],"rows":[]},{"id":"F-14","type":"text","title":"Die eine Sache","text":"Wenn ein Assistent nur eine Sache könnte – welche?","hint":"","required":true,"max_select":null,"maxlength":400,"options":[],"columns":[],"rows":[]}]},{"heading":"Teil 2 – Ausführlich (optional, ca. 20–30 Minuten)","blocks":[{"id":"F-15","type":"check","title":"Programme","text":"Welche Programme benutzt du wirklich täglich? (alles ankreuzen, was du regelmäßig offen hast)","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"Bestands-/Auftragsverwaltung","open":false},{"label":"Terminplanung / Kalender","open":false},{"label":"Fakturierung / ERP","open":false},{"label":"Handbuch / Diagnose","open":false},{"label":"Teilekatalog","open":false},{"label":"E-Mail-Programm","open":false},{"label":"Textverarbeitung","open":false},{"label":"Tabellen","open":false},{"label":"Browser","open":false},{"label":"Messenger (WhatsApp o. Ä.)","open":false},{"label":"Notizbuch / Papier","open":false},{"label":"Foto-/Videobearbeitung","open":false},{"label":"Sonstiges","open":true},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-16","type":"radio","title":"Geräte","text":"Auf wie vielen Geräten arbeitest du damit?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"einem PC","open":false},{"label":"PC + Handy","open":false},{"label":"PC + Laptop + Handy","open":false},{"label":"mehreren PCs","open":false},{"label":"getrennter Büro-PC","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-17","type":"radio","title":"Datenort","text":"Wo liegen deine Daten?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"alles lokal auf einem PC","open":false},{"label":"NAS / Server im Betrieb","open":false},{"label":"Cloud (Google, Microsoft 365, Sonstiges)","open":false},{"label":"gemischt","open":false},{"label":"weiß ich nicht genau","open":false}],"columns":[],"rows":[]},{"id":"F-18","type":"radio","title":"Datensicherung","text":"Gibt es eine Sicherung, und wer kümmert sich darum?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"ja, läuft automatisch","open":false},{"label":"ja, aber manuell","open":false},{"label":"nein","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-19","type":"text","title":"Angebotsprozess","text":"Wie entsteht heute ein Angebot – wer macht es, wie lange dauert es, in welchen Schritten?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[],"columns":[],"rows":[]},{"id":"F-20","type":"check","title":"Zweck des Angebots","text":"Wofür brauchst du ein Angebot? (mehrfach möglich)","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"verbindlicher Kostenvoranschlag","open":false},{"label":"Preisanker / Info für den Kunden","open":false},{"label":"Reparaturfreigabe","open":false},{"label":"für die Versicherung","open":false},{"label":"intern / Kalkulation","open":false},{"label":"Nachfassen","open":false},{"label":"Sonstiges","open":true},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-21","type":"check","title":"Inhalt","text":"Was muss ein Angebot zwingend enthalten?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"Kundendaten","open":false},{"label":"Fahrzeugdaten","open":false},{"label":"Positionen mit Einzelpreisen","open":false},{"label":"Arbeitszeit","open":false},{"label":"Gesamtsumme","open":false},{"label":"Gültigkeitsdatum","open":false},{"label":"Terminzusage","open":false},{"label":"Logo / eigenes Design","open":false},{"label":"Unterschrift / Freigabefeld","open":false},{"label":"Sonstiges","open":true},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-22","type":"radio","title":"Vorlagen und Design","text":"Gibt es Vorlagen oder ein eigenes Design?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"Ja, eigenes Logo und Formular","open":false},{"label":"Ja, aber unsauber / uneinheitlich","open":false},{"label":"Nur Word-Standard","open":false},{"label":"gar nicht","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-23","type":"radio","title":"Vorbereitetes Angebot","text":"Wäre es okay, wenn ein Assistent ein Angebot fertig vorbereitet und du gibst es nur frei?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"Ja, wäre super","open":false},{"label":"Ja, wenn ich nur Namen und Daten korrigiere","open":false},{"label":"Nur wenn Text und Preise exakt stimmen","open":false},{"label":"Nein, Angebote mache ich selbst","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-24","type":"radio","title":"Ausgehende Mails","text":"Wie viele Mails gehen pro Tag raus?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"0–5","open":false},{"label":"6–20","open":false},{"label":"21–50","open":false},{"label":"mehr als 50","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-25","type":"radio","title":"Eingehende Mails","text":"Wie viele Mails kommen pro Tag rein?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"0–5","open":false},{"label":"6–20","open":false},{"label":"21–50","open":false},{"label":"mehr als 50","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-26","type":"check","title":"Routine-Mails","text":"Welche Mails sind reine Routine? (mehrfach)","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"Terminbestätigung","open":false},{"label":"Rechnung","open":false},{"label":"Werkstattbericht mit Fotos","open":false},{"label":"Teileangebot","open":false},{"label":"Versicherung","open":false},{"label":"Zahlungserinnerung","open":false},{"label":"Sonstiges","open":true},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-27","type":"text","title":"Was soll aus den Mails werden","text":"Was müsste ein Assistent aus diesen Mails machen? (z. B. sortieren, Termine bestätigen, antworten, Entwürfe schreiben)","hint":"","required":false,"max_select":null,"maxlength":null,"options":[],"columns":[],"rows":[]},{"id":"F-28","type":"check","title":"Kontaktkanäle heute","text":"Wie kontaktierst du Kunden heute? (mehrfach)","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"Telefon","open":false},{"label":"WhatsApp","open":false},{"label":"SMS","open":false},{"label":"E-Mail","open":false},{"label":"Kundenportal","open":false},{"label":"Post","open":false},{"label":"gar nicht (mehr)","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-29","type":"check","title":"Anrufer","text":"Wer ruft am häufigsten an? (max. 3 Kreuze)","hint":"","required":false,"max_select":3,"maxlength":null,"options":[{"label":"Privatkunden","open":false},{"label":"Firmenkunden / Flotten","open":false},{"label":"Versicherung","open":false},{"label":"Teilehandel / Lieferant","open":false},{"label":"Werkstatt / Subunternehmer","open":false},{"label":"Behörde / Prüforgan","open":false},{"label":"Sonstige","open":true},{"label":"gemischt / weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-30","type":"check","title":"Anlass","text":"Was ist der häufigste Anlass eines Anrufs? (max. 3 Kreuze)","hint":"","required":false,"max_select":3,"maxlength":null,"options":[{"label":"Terminwunsch","open":false},{"label":"Preisanfrage","open":false},{"label":"Status des Auftrags","open":false},{"label":"Reklamation","open":false},{"label":"Rechnung","open":false},{"label":"Pannenhilfe / Abschleppen","open":false},{"label":"Ersatzteilfrage","open":false},{"label":"Sonstige","open":true},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-31","type":"radio","title":"Statusnachfrage","text":"Wie oft wird gefragt: „Wo bleibt mein Auto?“","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"täglich","open":false},{"label":"wöchentlich","open":false},{"label":"seltener","open":false},{"label":"kommt nicht vor","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-32","type":"text","title":"Nervigste Telefonsituation","text":"Beschreibe die eine Telefonsituation, die dich am meisten nervt.","hint":"","required":false,"max_select":null,"maxlength":null,"options":[],"columns":[],"rows":[]},{"id":"F-33","type":"matrix","title":"Zeitverteilung","text":"Womit verbringst du die meisten Minuten? (Schätzung, muss nicht 100 % ergeben)","hint":"Anteile eintragen. Die Summe muss nicht 100 ergeben.","required":false,"max_select":null,"maxlength":null,"options":[],"columns":["Tätigkeit","Anteil in %"],"rows":["Arbeiten am Fahrzeug","Tippen am PC","Telefon","Lager / Teile","Angebote schreiben","Buchhaltung","Kunden vor Ort bedienen","Warten / nichts tun"]},{"id":"F-34","type":"check","title":"Leerlauf","text":"Was machst du mit einer Stunde, in der nichts Dringendes ansteht?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"Reparaturen vorbereiten","open":false},{"label":"Lager aufräumen","open":false},{"label":"Bestellen","open":false},{"label":"Papierkram nachholen","open":false},{"label":"weiterarbeiten","open":false},{"label":"Feierabend","open":false},{"label":"Sonstiges","open":true},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-35","type":"text","title":"Störzeiten","text":"Zu welchen Uhrzeiten wirst du am meisten gestört?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[],"columns":[],"rows":[]},{"id":"F-36","type":"text","title":"Das Aufschieben","text":"Gibt es eine Sache, die du seit Monaten nicht anfangen willst, weil sie nervt?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[],"columns":[],"rows":[]},{"id":"F-37","type":"radio","title":"Datenabfluss","text":"Dürfen Kundendaten (Name, Fahrzeug, VIN, Fotos) an einen externen Dienst im Internet weitergegeben werden?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"ja, unproblematisch","open":false},{"label":"ja, wenn es in der EU bleibt","open":false},{"label":"nur anonymisiert","open":false},{"label":"nein, gar nicht","open":false},{"label":"nur mit Zustimmung des Kunden","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-38","type":"radio","title":"KI-Offenlegung","text":"Soll ein Assistent am Telefon sagen, dass er eine KI ist?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"Ja, unbedingt","open":false},{"label":"Ja, am Anfang reicht","open":false},{"label":"Nein, solange es gut läuft","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-39","type":"radio","title":"Was wäre dir wert","text":"Was wäre dir ein Monat mit einer Stunde weniger Arbeit wert?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[{"label":"20 €","open":false},{"label":"50 €","open":false},{"label":"100 €","open":false},{"label":"200 €","open":false},{"label":"300 €","open":false},{"label":"mehr","open":false},{"label":"mir ist nur wichtig, dass es läuft","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]},{"id":"F-40","type":"text","title":"Eigener Stundenwert","text":"Was kostet dich eine Stunde deiner eigenen Arbeitszeit – realistisch, wenn du sie selbst machst?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[],"columns":[],"rows":[]},{"id":"F-41","type":"check","title":"Erfolg messen","text":"Woran würdest du merken, dass es sich gelohnt hat? (2 Kreuze)","hint":"","required":false,"max_select":2,"maxlength":null,"options":[{"label":"weniger Anrufe, die ich annehmen muss","open":false},{"label":"mehr Anfragen, die nicht verloren gehen","open":false},{"label":"weniger Tippen","open":false},{"label":"weniger Rückrufe am Abend","open":false},{"label":"mehr fertige Angebote am Tag","open":false},{"label":"weniger Stress","open":false},{"label":"Sonstiges","open":true},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]}]},{"heading":"Teil 3 – Die letzten drei (Pflicht)","blocks":[{"id":"F-42","type":"text","title":"Platz 1","text":"Der größte Schmerzpunkt:","hint":"","required":true,"max_select":null,"maxlength":600,"options":[],"columns":[],"rows":[]},{"id":"F-43","type":"text","title":"Platz 2","text":"Der zweitgrößte:","hint":"","required":true,"max_select":null,"maxlength":600,"options":[],"columns":[],"rows":[]},{"id":"F-44","type":"text","title":"Platz 3","text":"Der drittgrößte:","hint":"","required":true,"max_select":null,"maxlength":600,"options":[],"columns":[],"rows":[]},{"id":"F-45","type":"text","title":"In 6 Monaten","text":"Wenn wir in sechs Monaten nur eine Veränderung erreicht haben wollen – welche?","hint":"","required":true,"max_select":null,"maxlength":400,"options":[],"columns":[],"rows":[]},{"id":"F-46","type":"text","title":"Offenes","text":"Gibt es etwas, das du mir direkt sagen willst, das in keine Frage passt?","hint":"","required":false,"max_select":null,"maxlength":null,"options":[],"columns":[],"rows":[]},{"id":"F-47","type":"radio","title":"Zurückschicken","text":"Wie möchtest du mir deine fertigen Antworten zurückschicken?","hint":"","required":true,"max_select":null,"maxlength":null,"options":[{"label":"Ergebnis als Datei herunterladen und per WhatsApp schicken","open":false},{"label":"Ergebnis als Text kopieren und in den WhatsApp-Chat einfügen","open":false},{"label":"Wir füllen den Bogen gemeinsam am Telefon aus","open":false},{"label":"weiß ich nicht","open":false}],"columns":[],"rows":[]}]}],"closing":{"heading":"Fertig","level":3,"text":"Danke! Wenn du beim Ausfüllen etwas unklar findest, ruf mich einfach an – das ist hier wichtiger als ein perfekter Bogen."}};
+const KEY = "fragebogen_juri_v1";
+
+/* ---------------------------------------------------------- State + Speicher
+   iOS-Hinweis: localStorage ist unter file:// unzuverlaessig und bei
+   file:// gar nicht der Fall (opaque origin). Deshalb In-Memory-Fallback,
+   damit die Eingaben waehrend des Ausfuellens nie verloren gehen. */
+let state = { answers: {} };
+let memStore = null;
+
+function lsGet(){
+  try{ return window.localStorage ? window.localStorage.getItem(KEY) : null; }
+  catch(e){ return memStore; }
+}
+function lsSet(v){
+  memStore = v;
+  try{ if(window.localStorage) window.localStorage.setItem(KEY, v); }
+  catch(e){ /* nur im Speicher */ }
+}
+function lsDel(){
+  memStore = null;
+  try{ if(window.localStorage) window.localStorage.removeItem(KEY); }catch(e){}
+}
+function storageWorks(){
+  try{
+    if(!window.localStorage) return false;
+    const t = "__probe__";
+    window.localStorage.setItem(t, "1");
+    const ok = window.localStorage.getItem(t) === "1";
+    window.localStorage.removeItem(t);
+    return ok;
+  }catch(e){ return false; }
+}
+const SECURE = (window.isSecureContext === true);
+
+function save(){
+  try{
+    lsSet(JSON.stringify(state));
+    setSave(storageWorks()
+      ? "Gespeichert " + new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})
+      : "Zwischengespeichert (nur bis zum Schließen)", "ok");
+  }catch(e){
+    setSave("Speichern nicht möglich – bitte am Ende exportieren", "err");
+  }
+}
+function setSave(txt, cls){
+  const el = document.getElementById("savestate");
+  if(!el) return;
+  el.textContent = txt; el.className = "savestate " + (cls||"");
+}
+function load(){
+  try{
+    const raw = lsGet();
+    if(raw){ const p = JSON.parse(raw); if(p && p.answers) state = p; }
+  }catch(e){}
+}
+
+/* ---------------------------------------------------------- Hilfsfunktionen */
+const $ = (s,r)=> (r||document).querySelector(s);
+const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function allBlocks(){ return DATA.sections.flatMap(s=>s.blocks); }
+function answered(b){
+  const v = state.answers[b.id];
+  if(v === undefined || v === null) return false;
+  if(b.type === "check") return Array.isArray(v) && v.length > 0;
+  if(b.type === "matrix") return v && Object.values(v).some(x=>String(x).trim() !== "");
+  if(b.type === "text") return String(v).trim() !== "";
+  return String(v).trim() !== "";
+}
+function setAnswer(id, val){ state.answers[id] = val; save(); refreshProgress(); }
+
+/* ---------------------------------------------------------- Rendering */
+function renderHead(){
+  $("#h-title").textContent = DATA.title;
+  $("#p-intro").innerHTML = DATA.customer
+    ? "<strong>Für " + esc(DATA.customer) + ".</strong> " + esc(DATA.intro)
+    : esc(DATA.intro);
+  $("#p-howto").innerHTML = "<strong>So geht es:</strong> " + esc(DATA.howto);
+  $("#p-note").innerHTML = "<strong>Wichtig:</strong> " + esc(DATA.customer_note);
+  $("#foot").textContent = "Fragebogen Juri – Stand 01.11.2026";
+}
+function renderJump(){
+  const nav = $("#jump"); nav.innerHTML = "";
+  DATA.sections.forEach((s, i)=>{
+    const a = document.createElement("a");
+    a.href = "#sec" + i;
+    a.textContent = s.heading.replace(/^Teil \d+ – /, "");
+    nav.appendChild(a);
+  });
+}
+function renderQuestions(){
+  const main = $("#main"); main.innerHTML = "";
+  DATA.sections.forEach((s, si)=>{
+    const sec = document.createElement("section");
+    sec.className = "part"; sec.id = "sec" + si;
+    const h = document.createElement("h2");
+    h.className = "parttitle";
+    h.innerHTML = "<span>" + esc(s.heading) + "</span><span class='ps' data-ps='" + si + "'></span>";
+    sec.appendChild(h);
+    s.blocks.forEach(b=>{ sec.appendChild(renderQ(b)); });
+    main.appendChild(sec);
+  });
+}
+function renderQ(b){
+  const el = document.createElement("div");
+  el.className = "q"; el.id = "q-" + b.id;
+  const head = document.createElement("div");
+  head.className = "qhead";
+  head.innerHTML = "<span class='qid'>" + esc(b.id) + "</span>" +
+                   "<span class='qtitle'>" + esc(b.title) + "</span>" +
+                   (b.required ? "<span class='req' title='Pflichtfrage'>*</span>" : "");
+  el.appendChild(head);
+  if(b.text){
+    const p = document.createElement("div");
+    p.className = "qtext"; p.textContent = b.text; el.appendChild(p);
+  }
+  if(b.hint){
+    const p = document.createElement("div");
+    p.className = "qhint"; p.textContent = b.hint; el.appendChild(p);
+  }
+  if(b.type === "radio") el.appendChild(renderChoices(b, false));
+  else if(b.type === "check") el.appendChild(renderChoices(b, true));
+  else if(b.type === "text") el.appendChild(renderText(b));
+  else if(b.type === "matrix") el.appendChild(renderMatrix(b));
+  return el;
+}
+function renderChoices(b, multi){
+  const box = document.createElement("div");
+  box.className = "choices";
+  const cur = state.answers[b.id];
+  const chosen = multi ? (Array.isArray(cur) ? cur : []) : (cur ? [cur] : []);
+  b.options.forEach((opt, i)=>{
+    const lab = document.createElement("label");
+    lab.className = "choice" + (chosen.includes(opt.label) ? " on" : "");
+    const inp = document.createElement("input");
+    inp.type = multi ? "checkbox" : "radio";
+    inp.name = b.id;
+    if(chosen.includes(opt.label)) inp.checked = true;
+    const sp = document.createElement("span");
+    sp.className = "lbl";
+    sp.appendChild(document.createTextNode(opt.label));
+    lab.appendChild(inp); lab.appendChild(sp);
+    if(opt.open){
+      const oi = document.createElement("input");
+      oi.type = "text"; oi.placeholder = opt.label + " …";
+      oi.className = "open-in";
+      oi.value = (state.answers["__open__"+b.id] && state.answers["__open__"+b.id][opt.label]) || "";
+      oi.addEventListener("input", ()=>{
+        const m = state.answers["__open__"+b.id] || {};
+        m[opt.label] = oi.value; state.answers["__open__"+b.id] = m; save();
+      });
+      sp.appendChild(oi);
+    }
+    inp.addEventListener("change", ()=>{
+      lab.classList.toggle("on", inp.checked);
+      if(multi){
+        let list = Array.isArray(state.answers[b.id]) ? state.answers[b.id].slice() : [];
+        if(inp.checked){
+          const max = b.max_select;
+          if(max && list.length >= max){
+            inp.checked = false; lab.classList.remove("on");
+            noteMax(b); return;
+          }
+          list.push(opt.label);
+        } else {
+          list = list.filter(x=>x !== opt.label);
+        }
+        setAnswer(b.id, list);
+      } else {
+        setAnswer(b.id, opt.label);
+      }
+    });
+    box.appendChild(lab);
+  });
+  const note = document.createElement("p");
+  note.className = "opt-note"; note.id = "note-" + b.id;
+  if(b.max_select){
+    note.textContent = "Höchstens " + b.max_select + " Kreuze. " +
+      (chosen.length ? "Aktuell: " + chosen.length + "." : "");
+  }
+  box.appendChild(note);
+  return box;
+}
+function noteMax(b){
+  const n = document.getElementById("note-" + b.id);
+  if(!n) return;
+  n.textContent = "Höchstens " + b.max_select + " Kreuze – bitte erst eine Auswahl abwählen.";
+  n.style.color = "var(--warn)";
+  setTimeout(()=>{
+    const cur = state.answers[b.id];
+    n.textContent = "Höchstens " + b.max_select + " Kreuze. " +
+      (Array.isArray(cur) ? "Aktuell: " + cur.length + "." : "");
+    n.style.color = "";
+  }, 2800);
+}
+function renderText(b){
+  const wrap = document.createElement("div");
+  const ta = document.createElement("textarea");
+  ta.value = state.answers[b.id] || "";
+  if(b.maxlength) ta.maxLength = b.maxlength;
+  ta.setAttribute("aria-label", b.id + " " + b.title);
+  const c = document.createElement("div");
+  c.className = "counter";
+  const upd = ()=>{
+    c.textContent = b.maxlength
+      ? (ta.value.length + " / " + b.maxlength + " Zeichen")
+      : ta.value.length + " Zeichen";
+  };
+  ta.addEventListener("input", ()=>{ setAnswer(b.id, ta.value); upd(); });
+  upd();
+  wrap.appendChild(ta); wrap.appendChild(c);
+  return wrap;
+}
+function renderMatrix(b){
+  const wrap = document.createElement("div");
+  const tb = document.createElement("table");
+  tb.className = "mx";
+  const thead = document.createElement("thead");
+  const tr = document.createElement("tr");
+  (b.columns || ["",""]).forEach(c=>{
+    const th = document.createElement("th"); th.textContent = c; tr.appendChild(th);
+  });
+  thead.appendChild(tr); tb.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  const cur = state.answers[b.id] || {};
+  b.rows.forEach(r=>{
+    const tr = document.createElement("tr");
+    const td1 = document.createElement("td"); td1.textContent = r;
+    const td2 = document.createElement("td");
+    const inp = document.createElement("input");
+    inp.type = "text"; inp.inputMode = "numeric"; inp.min = "0"; inp.max = "100";
+    inp.placeholder = "%";
+    inp.value = cur[r] === undefined ? "" : cur[r];
+    inp.setAttribute("aria-label", r + " Anteil in Prozent");
+    inp.addEventListener("input", ()=>{
+      const m = state.answers[b.id] || {};
+      m[r] = inp.value; setAnswer(b.id, m); updSum();
+    });
+    td2.appendChild(inp);
+    tr.appendChild(td1); tr.appendChild(td2); tbody.appendChild(tr);
+  });
+  tb.appendChild(tbody);
+  const sum = document.createElement("div");
+  sum.className = "mxsum";
+  const updSum = ()=>{
+    const m = state.answers[b.id] || {};
+    let t = 0, n = 0;
+    Object.values(m).forEach(v=>{
+      const x = parseFloat(String(v).replace(",","."));
+      if(!isNaN(x)){ t += x; n++; }
+    });
+    sum.textContent = n ? ("Summe der eingetragenen Anteile: " + t + " %" +
+        (n < b.rows.length ? " (noch " + (b.rows.length-n) + " Zeilen offen)" : "")) : "";
+    sum.classList.toggle("warn", n === b.rows.length && Math.round(t) !== 100);
+  };
+  updSum();
+  wrap.appendChild(tb); wrap.appendChild(sum);
+  return wrap;
+}
+function refreshProgress(){
+  const blocks = allBlocks();
+  const total = blocks.length;
+  const done = blocks.filter(answered).length;
+  const reqTotal = blocks.filter(b=>b.required).length;
+  const reqDone = blocks.filter(b=>b.required && answered(b)).length;
+  $("#pdone").textContent = done;
+  $("#ptot").textContent = total;
+  $("#pbar").style.width = (total ? (done/total*100) : 0) + "%";
+  $("#preq").textContent = reqTotal ? ("Pflicht: " + reqDone + " / " + reqTotal) : "";
+  DATA.sections.forEach((s, i)=>{
+    const ps = document.querySelector("[data-ps='" + i + "']");
+    if(!ps) return;
+    const sb = s.blocks;
+    ps.textContent = sb.filter(answered).length + " / " + sb.length;
+  });
+  $$("#jump a").forEach((a, i)=>{
+    const sb = DATA.sections[i].blocks;
+    a.classList.toggle("done", sb.length>0 && sb.every(answered));
+  });
+  renderFinish();
+}
+
+/* ---------------------------------------------------------- Export */
+function buildResult(){
+  const blocks = allBlocks();
+  const answers = {};
+  blocks.forEach(b=>{
+    const v = state.answers[b.id];
+    const openMap = state.answers["__open__"+b.id] || null;
+    let value = v === undefined ? null : v;
+    let display;
+    if(b.type === "check") display = Array.isArray(value) ? value.join(" | ") : "";
+    else if(b.type === "matrix") display = value ? Object.entries(value).map(([k,x])=>k+": "+x+"%").join(", ") : "";
+    else display = value === null ? "" : String(value);
+    answers[b.id] = {
+      titel: b.title, frage: b.text, typ: b.type,
+      antwort: value, antwort_text: display, offen: openMap
+    };
+  });
+  return {
+    instrument: DATA.title,
+    quelle: "Fragebogen_Juri_2026-11-01",
+    erstellt: new Date().toISOString(),
+    bearbeiter: DATA.customer || "",
+    stand: "01.11.2026",
+    antworten: answers,
+    fehlende_pflichtfragen: blocks.filter(b=>b.required && !answered(b)).map(b=>b.id)
+  };
+}
+function plainText(res){
+  const L = [];
+  L.push("ANWORTEN – " + res.instrument);
+  L.push("Erstellt: " + new Date(res.erstellt).toLocaleString("de-DE"));
+  L.push("");
+  DATA.sections.forEach(s=>{
+    L.push("=== " + s.heading + " ===");
+    s.blocks.forEach(b=>{
+      const a = res.antworten[b.id];
+      L.push("");
+      L.push(b.id + "  " + b.title + (b.required ? "  (Pflicht)" : ""));
+      if(b.text) L.push("  Frage: " + b.text);
+      L.push("  Antwort: " + (a.antwort_text || "(nicht beantwortet)"));
+      if(a.offen) Object.entries(a.offen).forEach(([k,v])=>{
+        if(String(v).trim()) L.push("    " + k + ": " + v);
+      });
+    });
+    L.push("");
+  });
+  if(res.fehlende_pflichtfragen.length)
+    L.push("Noch offene Pflichtfragen: " + res.fehlende_pflichtfragen.join(", "));
+  return L.join("\n");
+}
+function stamp(){
+  const d = new Date(), p = n => String(n).padStart(2,"0");
+  return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate()) + "_" + p(d.getHours()) + "-" + p(d.getMinutes());
+}
+function fname(ext){ return "Fragebogen_Juri_Antworten_" + stamp() + ext; }
+
+function renderFinish(){
+  const host = $("#finish");
+  const c = DATA.closing || {};
+  const shareNote = SECURE
+    ? "Auf dem iPhone öffnet sich beim Tippen das normale Teilen-Menü – dort „WhatsApp“ wählen, dann „Senden“."
+    : "Hinweis: Diese Seite wurde nicht über eine sichere HTTPS-Verbindung geöffnet. Für das Teilen bitte in Safari öffnen.";
+  host.innerHTML =
+    '<div class="done">' +
+      '<h3>' + esc(c.heading || "Fertig") + '</h3>' +
+      '<p>' + esc(c.text || "") + '</p>' +
+      '<p>' + esc(DATA.return_hint) + '</p>' +
+      '<ol class="steps">' +
+        '<li><b>Alles durchgehen</b> – oben siehst du, wie viele fehlen.</li>' +
+        '<li><b>„In WhatsApp senden“</b> – es öffnet sich das Teilen-Menü.</li>' +
+        '<li><b>WhatsApp wählen</b>, Nachricht prüfen, <b>„Senden“</b> tippen. Die JSON-Datei hängt automatisch an der Nachricht.</li>' +
+      '</ol>' +
+      '<p class="hintline">' + esc(shareNote) + '</p>' +
+      '<div id="warnbox"></div>' +
+      '<div id="okmsg" class="okmsg"></div>' +
+      '<button class="btn" id="btn-share">1. In WhatsApp senden</button>' +
+      '<button class="btn sec" id="btn-json">2. JSON-Datei herunterladen</button>' +
+      '<button class="btn sec" id="btn-copy">3. Text kopieren</button>' +
+      '<button class="btn sec" id="btn-text-dl">4. Als Textdatei herunterladen</button>' +
+      '<div class="out"><label for="outtext"><b>Deine Antworten als Text</b> – zum Markieren und Kopieren</label>' +
+      '<textarea id="outtext" readonly spellcheck="false"></textarea>' +
+      '<p class="hintline">Falls das Teilen nicht klappt: Text hier markieren, kopieren und direkt in den WhatsApp-Chat einfügen.</p></div>' +
+      '<div class="out"><label for="outjson"><b>Als JSON</b> – für die Weiterverarbeitung</label>' +
+      '<textarea id="outjson" readonly spellcheck="false"></textarea></div>' +
+      '<button class="btn ghost" id="btn-reset">Alles zurücksetzen und neu beginnen</button>' +
+    '</div>';
+
+  const res = buildResult();
+  const box = $("#warnbox");
+  if(res.fehlende_pflichtfragen.length){
+    box.className = "warnbox";
+    box.innerHTML = "<b>Noch offen (" + res.fehlende_pflichtfragen.length + " Pflichtfragen):</b> " +
+      res.fehlende_pflichtfragen.map(id => '<a href="#q-'+id+'" data-jump="'+id+'">' + id + "</a>").join(" · ");
+    box.querySelectorAll("[data-jump]").forEach(a=>{
+      a.addEventListener("click", ev=>{
+        ev.preventDefault();
+        const t = document.getElementById("q-"+a.dataset.jump);
+        if(t) t.scrollIntoView({behavior:"smooth", block:"center"});
+      });
+    });
+  }
+  $("#outtext").value = plainText(res);
+  $("#outjson").value = JSON.stringify(res, null, 2);
+
+  $("#btn-share").addEventListener("click", doShare);
+  $("#btn-json").addEventListener("click", doDownloadJson);
+  $("#btn-copy").addEventListener("click", doCopy);
+  $("#btn-text-dl").addEventListener("click", doDownloadText);
+  $("#btn-reset").addEventListener("click", doReset);
+}
+
+function downloadBlob(blob, name){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name; a.rel = "noopener";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 8000);
+}
+function doDownloadJson(){
+  const res = buildResult();
+  downloadBlob(new Blob([JSON.stringify(res, null, 2)], {type:"application/json"}), fname(".json"));
+  $("#outjson").value = JSON.stringify(res, null, 2);
+  showOk("Die Datei wurde heruntergeladen. Öffne sie in WhatsApp und hänge sie an deine Nachricht an.");
+}
+function doDownloadText(){
+  const res = buildResult();
+  downloadBlob(new Blob([plainText(res)], {type:"text/plain;charset=utf-8"}), fname(".txt"));
+  showOk("Die Textdatei wurde heruntergeladen.");
+}
+
+/* Der Kern auf iOS: navigator.share mit Datei. Faellt er aus (kein
+   Secure Context, kein canShare, Nutzer bricht ab), geht es auf
+   Zwischenablage und dann auf den sichtbaren Text zurueck. */
+async function doShare(){
+  const res = buildResult();
+  const text = plainText(res);
+  const json = JSON.stringify(res, null, 2);
+  $("#outtext").value = text;
+  $("#outjson").value = json;
+
+  const file = new File([json], fname(".json"), {type:"application/json"});
+  if(SECURE && navigator.share){
+    try{
+      if(!navigator.canShare || navigator.canShare({files:[file]})){
+        await navigator.share({
+          files:[file],
+          title:"Meine Antworten zum Fragebogen",
+          text:"Meine Antworten zum Fragebogen (Telefonagent & Assistenz)."
+        });
+        showOk("Danke, die Antworten wurden geteilt.");
+        return;
+      }
+    }catch(e){
+      if(e && e.name === "AbortError") return;   // Nutzer hat abgebrochen
+    }
+  }
+  const ok = await copyText(text);
+  if(ok){
+    showOk("Teilen war hier nicht möglich – der Text liegt jetzt in der Zwischenablage. " +
+           "Öffne WhatsApp, tippe ins Nachrichtenfeld und füge ihn ein.");
+  }else{
+    showOk("Teilen und Kopieren waren nicht möglich – der Text steht unten. " +
+           "Bitte markieren, kopieren und in WhatsApp einfügen.");
+    try{ $("#outtext").focus(); $("#outtext").select(); }catch(e){}
+  }
+}
+async function copyText(t){
+  try{
+    if(navigator.clipboard && SECURE){
+      await navigator.clipboard.writeText(t); return true;
+    }
+  }catch(e){}
+  try{
+    const ta = document.createElement("textarea");
+    ta.value = t;
+    ta.setAttribute("readonly","");
+    ta.style.position = "fixed"; ta.style.top = "0"; ta.style.left = "0";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus(); ta.select(); ta.setSelectionRange(0, t.length);
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  }catch(e){ return false; }
+}
+async function doCopy(){
+  const res = buildResult();
+  const text = plainText(res);
+  $("#outtext").value = text;
+  const ok = await copyText(text);
+  showOk(ok ? "Der Text liegt in der Zwischenablage – jetzt in den WhatsApp-Chat einfügen."
+            : "Kopieren hat nicht geklappt. Der Text steht unten – bitte markieren und kopieren.");
+  if(!ok){ try{ $("#outtext").focus(); $("#outtext").select(); }catch(e){} }
+}
+function showOk(msg){
+  const el = $("#okmsg");
+  if(!el) return;
+  el.textContent = msg; el.classList.add("show");
+  try{ el.scrollIntoView({behavior:"smooth", block:"nearest"}); }catch(e){}
+}
+function doReset(){
+  if(!confirm("Wirklich alles löschen und neu beginnen? Alle Eingaben gehen verloren.")) return;
+  state = { answers: {} };
+  lsDel();
+  renderQuestions(); refreshProgress();
+  setSave("Alles zurückgesetzt", "ok");
+  try{ window.scrollTo({top:0, behavior:"smooth"}); }catch(e){}
+}
+
+/* ---------------------------------------------------------- Start */
+function detectEnvironment(){
+  const isFile = location.protocol === "file:";
+  const wa = /WhatsApp/i.test(navigator.userAgent);
+  if(isFile || wa){
+    $("#ioswarn").style.display = "block";
+    const why = document.getElementById("ioswarn-why");
+    if(why){
+      if(wa) why.innerHTML = " Du bist gerade in der WhatsApp-Vorschau. Tippe oben auf „Öffnen“ bzw. " +
+        "„In Safari öffnen“, damit das Formular läuft.";
+      else why.innerHTML = " Diese Seite wurde direkt von der Datei geöffnet. Für das Teilen bitte " +
+        "über einen Link in Safari öffnen.";
+    }
+  }
+}
+renderHead();
+renderJump();
+renderQuestions();
+load();
+renderQuestions();
+refreshProgress();
+detectEnvironment();
+if(Object.keys(state.answers).length) setSave("Frühere Eingaben geladen", "ok");
+</script>
+</body>
+</html>
